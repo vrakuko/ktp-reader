@@ -46,147 +46,96 @@ def is_mostly_digits(text: str) -> bool:
     # Mengembalikan True jika jumlah angka > separuh dari total panjang string
     return digit_count > len(text) / 2
 
-def validprov (word : str, nextword : str = None) -> str:
+def validprov (word : str) -> str:
     listnamaprov = list(prov_df['name'].values)
-    # misal ['provinsi jawa timur']
-    if len(word) > 10:
-        provval, _ = process.extractOne(word, listnamaprov)  
-        provval += ' nyatu'
+    provdummy = word
+    match , score = process.extractOne(provdummy, listnamaprov)
+    if match :
+        if score>40 :
+            provval = match + ' nyatu'
+        else:   #misal ['provinsi jawa', 'timur']
+            provval = match+' possibly'
     else :
-        #case langka , misal ['provinsi', 'jawa timur']
-        if nextword == None:
-            provval = 'dummy'
-        else:
-            provdummy = nextword
-            match , score = process.extractOne(provdummy, listnamaprov)
-            if match :
-                if score>60 :
-                    provval = match + ' misah'
-                else:   #misal ['provinsi jawa', 'timur']
-                    provval = match+' possibly'
-            else :
-                provval = match + " dummy"
+        provval = match + " dummy"
 
     return provval
 
 
-def validkab  (word : str, nextword : str= None) -> str:
+def validkab  (word : str) -> str:
     listnamakabkota = list(kabkota_df['name'].values)
-    if len(word) > 12 :
-        kabval, _ = process.extractOne(word, listnamakabkota)
-        kabval += ' nyatu'
-    else :  #case tidak umum
-            
-        if nextword == None:
-            kabval = 'dummy'
-        else:
-            kabdummy = nextword
-            match , score = process.extractOne(kabdummy, listnamakabkota)
-            if match :
-                if score>60 :
-                    kabval = match   + ' misah'
-                else:   #misal ['provinsi jawa', 'timur']
-                    kabval = match+' possibly'
-            else :
-                kabval = match+ " dummy"
+
+    kabdummy = word
+    match , score = process.extractOne(kabdummy, listnamakabkota)
+    if match :
+        if score>60 :
+            kabval = match   + ' nyatu'
+        else:   #misal ['provinsi jawa', 'timur']
+            kabval = match+' possibly'
+    else :
+        kabval = match+ " dummy"
 
     return kabval
 
 
 
 
-def validkota  (word : str, nextword : str= None) -> str:
+def validkota  (word : str) -> str:
     listnamakabkota = list(kabkota_df['name'].values)
-    if len(word) > 5 :
-        kotaval, _ = process.extractOne(word, listnamakabkota)
-        kotaval += ' nyatu'
-    else :  #case tidak umum
-        if nextword == None:
-            kotaval = 'dummy'
-        else:
-            kotadummy = nextword
-            match , score = process.extractOne(kotadummy, listnamakabkota)
-            if match :
-                if score>60 :
-                    kotaval = match + ' misah'
-                else:   #misal ['provinsi jawa', 'timur']
-                    kotaval = match+' possibly'
-            else :
-                kotaval = match + " dummy"
+    kotadummy = word
+    match , score = process.extractOne(kotadummy, listnamakabkota)
+    if match :
+        if score>60 :
+            kotaval = match + ' nyatu'
+        else:   #misal ['provinsi jawa', 'timur']
+            kotaval = match+' possibly'
+    else :
+        kotaval = match + " dummy"
 
     return kotaval
 
 
 
-def validnik(word:str, nextword : str = None):
-    if len(word)>5:
-        # Pattern: (?<=nik\s)\d+ → ambil digits setelah "nik "
 
-        #pemotongan nik pada word utk mengambil nik-nya saja
-        if nextword is  None:
-            polanik = r'(?:nik|n1k|n1kk|NIK|NI4|NIA|NIk|Nlk|MiK|Mk|Nk|NK|.ik|.K)[\s:;.]{0,4}'   #asumsi pola umum pada 'nik : '
-            cutnik = re.search(polanik, word)
-            nikdummy = word[cutnik.end():]
-        else:
-            nikdummy = nextword
+def validgeokk(wordprov, wordkk):
+    prov_dict = prov_df.set_index('name')['id'].astype(str).to_dict()
+    kabkota_dict = kabkota_df.set_index('name')['id'].astype(str).to_dict()
 
-        lennikdummy = len(nikdummy)
+    provid = prov_dict[wordprov]
+    listnamageo = list(k for k, id in kabkota_dict.items() if provid in id )
+    val,_ = process.extractOne(wordkk, listnamageo)
+    
+    return val
 
 
-        if lennikdummy > 14:
-            numcount =0
-            ltrcount = 0
-            symcount = 0
-            for c in nikdummy :
-                if c.isdigit():
-                    numcount+=1 
-                elif c.isalpha(): # Huruf
-                    ltrcount += 1
-                else: # Karakter lain seperti simbol, spasi
-                    symcount += 1
 
+def validnik(nextword : str ):
+    # if not is_mostly_digits(nextword):
+    #     nikval = 'dummy'
+    # else:                #case langka
+    nikdummy = nextword
+    lennikdummy = len(nikdummy)
+    if lennikdummy > 14:
+        numcount =0
+        ltrcount = 0
+        symcount = 0
+        for c in nikdummy :
+            if c.isdigit():
+                numcount+=1 
+            elif c.isalpha(): # Huruf
+                ltrcount += 1
+            else: # Karakter lain seperti simbol, spasi
+                symcount += 1
+    
+        if numcount>ltrcount and numcount>symcount:
+            if numcount == lennikdummy :
+                nikval = nikdummy+ ' misah'
+            else :
+                nikval = nikdummy + ' possibly'   #kotor means nik terkontaminasi karakter selain angka
             
-                
-            if numcount>ltrcount and numcount>symcount:
-                if numcount == lennikdummy :
-                    nikval = nikdummy+ ' nyatu'
-                else :
-                    nikval = nikdummy + ' possibly'   #kotor means nik terkontaminasi karakter selain angka
-                
-            else :                                       
-                nikval = nikdummy + ' possibly'      #angka menjadi karakter minoritas di nik, lebih kotor dari kondisi pertama
-        else:
-            nikval = nikdummy + ' dummy'        #panjang nik kurang dari required 
-        
-    else :      
-        if nextword == None:
-            nikval = 'dummy'
-        else:                #case langka
-            nikdummy = nextword
-
-            lennikdummy = len(nikdummy)
-            if lennikdummy > 14:
-                numcount =0
-                ltrcount = 0
-                symcount = 0
-                for c in nikdummy :
-                    if c.isdigit():
-                        numcount+=1 
-                    elif c.isalpha(): # Huruf
-                        ltrcount += 1
-                    else: # Karakter lain seperti simbol, spasi
-                        symcount += 1
-            
-                if numcount>ltrcount and numcount>symcount:
-                    if numcount == lennikdummy :
-                        nikval = nikdummy+ ' misah'
-                    else :
-                        nikval = nikdummy + ' possibly'   #kotor means nik terkontaminasi karakter selain angka
-                    
-                else :                                       
-                    nikval = nikdummy + ' possibly'      #angka menjadi karakter minoritas di nik, lebih kotor dari kondisi pertama
-            else:
-                nikval = nikdummy + ' dummy'        #panjang nik kurang dari required 
+        else :                                       
+            nikval = nikdummy + ' possibly'      #angka menjadi karakter minoritas di nik, lebih kotor dari kondisi pertama
+    else:
+        nikval = nikdummy + ' dummy'        #panjang nik kurang dari required 
 
     return nikval
 
@@ -222,40 +171,60 @@ def validnama (nextword:str):
     
 
 
+#jenis kelamin sangat mungkin terpisah dari fieldnya sehingga semestinya fungsi ini kurang tepat
+
+# def validgender (word : str, nextword:str=None):
+#     gendervallist = ["LAKI-LAKI", "PEREMPUAN"]
+
+#     if len(word) > 14 :
+#         genderval, _ = process.extractOne(word, gendervallist)
+#         genderval += ' nyatu'
+#     else :  #case tidak umum
+#         if nextword == None:
+#             genderval = 'dummy'
+#         else:
+#             genderdummy = nextword
+#             match , score = process.extractOne(genderdummy, gendervallist)
+#             if match :
+#                 if score>60 :
+#                     genderval = match + ' misah'
+#                 else:   #misal ['provinsi jawa', 'timur']
+#                     genderval = match+' possibly'
+#             else :
+#                 genderval = match + " dummy"
+#     return genderval
 
 
-def validgender (word : str, nextword:str=None):
+def validgender (nextword : str):
     gendervallist = ["LAKI-LAKI", "PEREMPUAN"]
-
-    if len(word) > 14 :
-        genderval, _ = process.extractOne(word, gendervallist)
-        genderval += ' nyatu'
-    else :  #case tidak umum
-        if nextword == None:
-            genderval = 'dummy'
-        else:
-            genderdummy = nextword
-            match , score = process.extractOne(genderdummy, gendervallist)
-            if match :
-                if score>60 :
-                    genderval = match + ' misah'
-                else:   #misal ['provinsi jawa', 'timur']
-                    genderval = match+' possibly'
-            else :
-                genderval = match + " dummy"
+    if nextword == None:            #kondisi yg hampir mustahil terpenuuhi
+        genderval = 'dummy'
+    else:
+        genderdummy = nextword
+        match , score = process.extractOne(genderdummy, gendervallist)
+        if match :
+            if score>60 :
+                genderval = match + ' misah'
+            else:   #misal ['provinsi jawa', 'timur']
+                genderval = match+' possibly'
+        else :
+            genderval = match + " dummy"
     return genderval
 
 
+
 def validdarah(nextword):
-    darahvallist = ['A', 'B', 'AB', 'O', '-']
-    match, score = process.extractOne(nextword,darahvallist)
-    if match:
-        if score >50 :
-            darahval = match + ' misah'
+
+    if nextword<=2:
+        darahvallist = ['A', 'B', 'AB', 'O', '-']
+        match, score = process.extractOne(nextword,darahvallist)
+        if match:
+            if score >40 :
+                darahval = match + ' misah'
+            else:
+                darahval = match + ' possibly'
         else:
-            darahval = match + ' possibly'
-    else:
-        darahval = match + " dummy"
+            darahval = match + " dummy"
 
     return darahval 
 
@@ -264,9 +233,9 @@ def validrtrw(nextword):
     polartrw = r'(?:rt/rw|rt rw|rtirw|rtrw|atirw|rt|rw|RTiRW|RT/RW|RTIRW|RTRW|.RW|.w)[\s:;./-]{0,4}' #asumsi pola umum pada 'nik : '
     #pemotongan nik pada word utk mengambil nik-nya saja
     cutrtrw = re.search(polartrw, nextword)
-    print(cutrtrw)
+    # print(f'cutrtrw = {cutrtrw}')
     rtrwdummy = nextword[cutrtrw.end():]
-
+    print(f'rtrw find = {rtrwdummy}')
     lenrtrwdummy = len(rtrwdummy)
     if lenrtrwdummy > 4:
         numcount =0
@@ -295,11 +264,11 @@ def validrtrw(nextword):
 
 
 # def validalamat (word: str):
-def validkeldes  (nextword : str= None) :
-    listnamakel = list(kel_df['name'].values)
-    carrykel = copy.deepcopy(listnamakel) 
+def validkeldes  (nextword, listkel ) :
+    # listnamakel = list(kel_df['name'].values)
+
     keldummy = nextword
-    match , score = process.extractOne(keldummy, carrykel)
+    match , score = process.extractOne(keldummy, listkel)
     print(f'kelval  {match}')
     if match :
         if score!=0 :
@@ -315,18 +284,22 @@ def validkeldes  (nextword : str= None) :
 
 # def validalamat (word: str):
 def validkec  (word : str, nextword : str= None) -> str:
+    print(f"word : {word}")
+    print(f'nextword:{nextword}')
     listnamakec = list(kec_df['name'].values)
     if len(word) > 12 :
         kecval, _ = process.extractOne(word, listnamakec)
         kecval += ' nyatu'
     else :  #case tidak umum
+        print(f'panjang word {word}: {len(word)}')
         if nextword == None:
+            print(f'kok gitu {nextword}')
             kecval = 'dummy'
         else:
             kecdummy = nextword
             match , score = process.extractOne(kecdummy, listnamakec)
             if match :
-
+                kel_dict
                 if score!=0 :
                                     
                     kecval = match  + ' misah'
@@ -336,6 +309,39 @@ def validkec  (word : str, nextword : str= None) -> str:
                 kecval = match + " dummy"
 
     return kecval
+
+
+def validgeokec (wordkec, wordkel):
+        kel_dict = kel_df.set_index('name')['id'].astype(str).to_dict()
+        kec_dict = kec_df.set_index('name')['id'].astype(str).to_dict()
+
+        delwords = [
+            'misah', 'nyatu', 'possibly', 'dummy'
+        ]
+        print(f'wordkec {wordkec}')
+        listnamakec = list(kec_df['name'].values)
+        reskec,_ = process.extractOne(wordkec, listnamakec)
+        # reskec = validkec(wordkec)
+        valkec = reskec
+        print(f'kecamatan {valkec} as valkec')
+        for word in delwords:
+            if word in reskec:
+                print(f'kecamatan {reskec} sebelum diedit')
+                valkec = valkec.replace(word, '').strip()
+                if not valkec:
+                    print(f'eror karena jadi kosong dek dummy terhapus')
+                break
+            
+        print(f'kecamatan {valkec}')
+        
+        kecid = kec_dict[valkec]
+
+        listnamageo = list(k for k, id in kel_dict.items() if kecid in id )
+        val,_ = process.extractOne(wordkel, listnamageo)
+        return val
+
+# def validgeo ():
+#     kel
     
 # # def validalamat (word: str):
 # def validkeldes  (nextword : str= None) :
@@ -418,7 +424,7 @@ def validagama (nextword):
 def validkawin (word : str, nextword:str=None):
     kawinvallist = ["BELUM KAWIN",  "KAWIN",  "CERAI HIDUP", "CERAI MATI"]
 
-    if len(word)>16:
+    if len(word)>18:
         kawinval, _ = process.extractOne(word,kawinvallist )
         kawinval+=' nyatu'
     else:
@@ -462,7 +468,7 @@ def validjob (nextword:str):
 def validwn (word : str, nextword:str=None):
     wnvallist = ["WNI", "WNA"]
 
-    if len(word)>10:
+    if len(word)>17:
         wnval, _ = process.extractOne(word,wnvallist )
         wnval+=' nyatu'
     else:
@@ -517,3 +523,71 @@ def validberlaku (nextword:str):
     return berlakuval
 
 
+#kondisi nik menyatu dgn value hampir mustahil
+# def validnik(word:str, nextword : str = None):
+#     if len(word)>5:
+#         # Pattern: (?<=nik\s)\d+ → ambil digits setelah "nik "
+#         polanik = r'(?:nik|n1k|n1kk|NIK|NI4|NIA|NIk|Nlk|MiK|Mk|Nk|NK|.ik|.K)[\s:;.]{0,4}'   #asumsi pola umum pada 'nik : '
+#         #pemotongan nik pada word utk mengambil nik-nya saja
+#         cutnik = re.search(polanik, word)
+#         nikdummy = word[cutnik.end():]
+
+#         lennikdummy = len(nikdummy)
+
+
+#         if lennikdummy > 14:
+#             numcount =0
+#             ltrcount = 0
+#             symcount = 0
+#             for c in nikdummy :
+#                 if c.isdigit():
+#                     numcount+=1 
+#                 elif c.isalpha(): # Huruf
+#                     ltrcount += 1
+#                 else: # Karakter lain seperti simbol, spasi
+#                     symcount += 1
+
+            
+                
+#             if numcount>ltrcount and numcount>symcount:
+#                 if numcount == lennikdummy :
+#                     nikval = nikdummy+ ' nyatu'
+#                 else :
+#                     nikval = nikdummy + ' possibly'   #kotor means nik terkontaminasi karakter selain angka
+                
+#             else :                                       
+#                 nikval = nikdummy + ' possibly'      #angka menjadi karakter minoritas di nik, lebih kotor dari kondisi pertama
+#         else:
+#             nikval = nikdummy + ' dummy'        #panjang nik kurang dari required 
+        
+#     else :      
+#         if nextword == None:
+#             nikval = 'dummy'
+#         else:                #case langka
+#             nikdummy = nextword
+
+#             lennikdummy = len(nikdummy)
+#             if lennikdummy > 14:
+#                 numcount =0
+#                 ltrcount = 0
+#                 symcount = 0
+#                 for c in nikdummy :
+#                     if c.isdigit():
+#                         numcount+=1 
+#                     elif c.isalpha(): # Huruf
+#                         ltrcount += 1
+#                     else: # Karakter lain seperti simbol, spasi
+#                         symcount += 1
+            
+#                 if numcount>ltrcount and numcount>symcount:
+#                     if numcount == lennikdummy :
+#                         nikval = nikdummy+ ' misah'
+#                     else :
+#                         nikval = nikdummy + ' possibly'   #kotor means nik terkontaminasi karakter selain angka
+                    
+#                 else :                                       
+#                     nikval = nikdummy + ' possibly'      #angka menjadi karakter minoritas di nik, lebih kotor dari kondisi pertama
+#             else:
+#                 nikval = nikdummy + ' dummy'        #panjang nik kurang dari required 
+
+#     return nikval
